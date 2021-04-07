@@ -24,7 +24,7 @@ from mautrix.util.async_db import Database
 from maufbapi.types.mqtt import ThreadKey as MQTTThreadKey
 from maufbapi.types.graphql import ThreadKey as GraphQLThreadKey
 
-fake_db = Database("") if TYPE_CHECKING else None
+fake_db = Database.create("") if TYPE_CHECKING else None
 
 
 class ThreadType(Enum):

@@ -22,7 +22,7 @@ from mautrix.types import UserID, RoomID
 from mautrix.util.async_db import Database
 from maufbapi import AndroidState
 
-fake_db = Database("") if TYPE_CHECKING else None
+fake_db = Database.create("") if TYPE_CHECKING else None
 
 
 @dataclass

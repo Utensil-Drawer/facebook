@@ -13,3 +13,6 @@ prometheus_client>=0.6,<0.11
 
 #/weblogin
 setuptools
+
+#/sqlite
+aiosqlite>=0.16,<0.18
