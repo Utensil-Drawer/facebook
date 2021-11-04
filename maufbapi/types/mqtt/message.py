@@ -160,6 +160,13 @@ class Presence(SerializableAttrs):
     list_type: str
 
 
+@dataclass
+class TypingNotif(SerializableAttrs):
+    user_id: int = attr.ib(metadata={"json": "sender_fbid"})
+    state: int
+    type: str
+
+
 class MentionType(SerializableEnum):
     PERSON = "p"
 
