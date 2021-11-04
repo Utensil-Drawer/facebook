@@ -35,6 +35,7 @@ class RealtimeTopic(Enum):
     MARK_THREAD_READ_RESPONSE = "/t_mt_resp"
     OPENED_THREAD = "/opened_thread"
     ORCA_PRESENCE = "/orca_presence"
+    PRIVATE_TYPING = "/orca_typing_notifications"
 
     @property
     def encoded(self) -> str:

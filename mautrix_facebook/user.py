@@ -647,6 +647,7 @@ class User(DBUser, BaseUser):
                 self.mqtt.add_event_handler(mqtt_t.OwnReadReceipt, self.on_message_seen_self)
                 self.mqtt.add_event_handler(mqtt_t.Reaction, self.on_reaction)
                 self.mqtt.add_event_handler(mqtt_t.Presence, self.on_presence)
+                self.mqtt.add_event_handler(mqtt_t.TypingNotif, self.on_typing)
                 self.mqtt.add_event_handler(mqtt_t.AddMember, self.on_members_added)
                 self.mqtt.add_event_handler(mqtt_t.RemoveMember, self.on_member_removed)
                 self.mqtt.add_event_handler(mqtt_t.ThreadChange, self.on_thread_change)
@@ -815,16 +816,15 @@ class User(DBUser, BaseUser):
         for update in evt.updates:
             puppet = await pu.Puppet.get_by_fbid(update.user_id, create=False)
             if puppet:
-                self.log.trace(f"Received presence for: {puppet.name} - {update.status}")
                 await PresenceUpdater.set_presence(puppet, PresenceState.ONLINE if update.status == 2 else PresenceState.OFFLINE)
-
-    # @async_time(METRIC_TYPING)
-    # async def on_typing(self, evt: fbchat.Typing) -> None:
-    #     fb_receiver = self.fbid if isinstance(evt.thread, fbchat.User) else None
-    #     portal = po.Portal.get_by_thread(evt.thread, fb_receiver)
-    #     if portal.mxid and not portal.backfill_lock.locked:
-    #         puppet = pu.Puppet.get_by_fbid(evt.author.id)
-    #         await puppet.intent.set_typing(portal.mxid, is_typing=evt.status, timeout=120000)
+    
+    @async_time(METRIC_TYPING)
+    async def on_typing(self, evt: mqtt_t.TypingNotif) -> None:
+        thread = mqtt_t.ThreadKey(other_user_id=evt.user_id)
+        portal = await po.Portal.get_by_thread(thread, self.fbid, create=False)
+        if portal and portal.mxid and not portal.backfill_lock.locked:
+            puppet = await pu.Puppet.get_by_fbid(evt.user_id)
+            await puppet.intent.set_typing(portal.mxid, is_typing=evt.state == 1, timeout=120000)
 
     @async_time(METRIC_MEMBERS_ADDED)
     async def on_members_added(self, evt: mqtt_t.AddMember) -> None:

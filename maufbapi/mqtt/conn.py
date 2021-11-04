@@ -33,7 +33,7 @@ from mautrix_facebook.config import Config
 from ..state import AndroidState
 from ..types import (MessageSyncPayload, RealtimeConfig, RealtimeClientInfo, SendMessageRequest,
                      MarkReadRequest, OpenedThreadRequest, SendMessageResponse, RegionHintPayload)
-from ..types.mqtt import Mention, Presence
+from ..types.mqtt import Mention, Presence, TypingNotif
 from ..thrift import ThriftReader, ThriftObject
 from .otclient import MQTToTClient
 from .subscription import RealtimeTopic, topic_map
@@ -138,7 +138,7 @@ class AndroidMQTT:
         #  '/t_dr_response', '/t_omnistore_sync', '/t_push', '/ixt_trigger', '/rs_resp',
         #  '/t_region_hint', '/t_trace', '/t_tn', '/sr_res', '/t_sp', '/ls_resp', '/t_rtc_multi']
         subscribe_topics = [RealtimeTopic.MESSAGE_SYNC, RealtimeTopic.REGION_HINT,
-                            RealtimeTopic.SEND_MESSAGE_RESP,
+                            RealtimeTopic.SEND_MESSAGE_RESP, RealtimeTopic.PRIVATE_TYPING,
                             RealtimeTopic.MARK_THREAD_READ_RESPONSE]
 
         if self.config["bridge.presence"]:
@@ -309,6 +309,14 @@ class AndroidMQTT:
             self.log.debug("Failed to parse presence payload %s", payload, exc_info=True)
             return
 
+    def _on_typing(self, payload: bytes) -> None:
+        try:
+            notif = TypingNotif.deserialize(json.loads(payload))
+            asyncio.create_task(self._dispatch(notif))
+        except Exception:
+            self.log.debug("Failed to parse typing payload %s", payload, exc_info=True)
+            return
+
     def _on_region_hint(self, payload: bytes) -> None:
         rhp = RegionHintPayload.from_thrift(payload)
         if self.region_hint_callback:
@@ -326,6 +334,10 @@ class AndroidMQTT:
             if topic == RealtimeTopic.ORCA_PRESENCE:
                 self._on_presence(message.payload)
                 return
+            elif topic == RealtimeTopic.PRIVATE_TYPING:
+                self._on_typing(message.payload)
+                return
+
             _, message.payload = message.payload.split(b"\x00", 1)
             if topic == RealtimeTopic.MESSAGE_SYNC:
                 self._on_message_sync(message.payload)
